@@ -1,0 +1,496 @@
+RAPPORT D'IMPLÉMENTATION : PIPELINE MLOPS POUR LA CLASSIFICATION DE TEXTE
+=======================================================================
+
+Table des Matières
+-----------------
+1. Introduction et Contexte
+2. Architecture Technique Détaillée
+3. Implémentation du Versioning des Données
+4. Développement du Modèle de Classification
+5. Pipeline d'Entraînement
+6. Déploiement et Infrastructure
+7. Sécurité et Conformité
+8. Monitoring et Maintenance
+9. Conclusion
+
+1. Introduction et Contexte
+--------------------------
+1.1 Objectifs du Projet
+Le projet vise à mettre en place un pipeline MLOps complet pour la classification automatique de textes. Cette solution intègre les meilleures pratiques DevOps appliquées au Machine Learning, en utilisant des technologies modernes et des approches innovantes.
+
+1.2 Périmètre du Projet
+- Gestion et versioning des données
+- Développement et entraînement des modèles
+- Déploiement automatisé
+- Monitoring en temps réel
+- Sécurisation complète du pipeline
+
+2. Architecture Technique Détaillée
+---------------------------------
+2.1 Vue d'Ensemble de l'Architecture
+
+L'architecture du système est construite autour de plusieurs composants clés interconnectés :
+
+a) Couche de Données
+   - Système de stockage distribué pour les données d'entraînement
+   - DVC pour le versioning des données
+   - Solutions de stockage objet (MinIO) pour les modèles
+
+b) Couche de Traitement
+   - Services de prétraitement des données
+   - Pipeline d'entraînement
+   - Services d'évaluation des modèles
+
+c) Couche d'API
+   - FastAPI pour l'exposition des endpoints
+   - Services de validation et de transformation
+   - Système de mise en cache
+
+d) Couche de Monitoring
+   - Prometheus pour la collecte des métriques
+   - Grafana pour la visualisation
+   - Système d'alerting
+
+2.2 Technologies Utilisées
+
+2.2.1 Framework et Langages
+- Python 3.9+ comme langage principal
+- FastAPI pour l'API REST
+- PyTorch 2.0 pour le deep learning
+- Hugging Face Transformers pour les modèles NLP
+
+2.2.2 Infrastructure
+- Docker pour la conteneurisation
+- Kubernetes pour l'orchestration
+- Helm pour le packaging
+- ArgoCD pour le GitOps
+
+2.2.3 MLOps
+- DVC pour le versioning des données
+- MLflow pour le tracking des expériences
+- Weights & Biases pour la visualisation
+- Great Expectations pour la validation des données
+
+3. Implémentation du Versioning des Données
+-----------------------------------------
+3.1 Configuration de DVC
+
+La mise en place de DVC s'effectue avec une configuration optimisée pour notre cas d'usage :
+
+```python
+# Configuration DVC
+dvc_config = {
+    'remote': {
+        'minio': {
+            'url': 's3://mlops-bucket',
+            'endpointurl': 'http://minio:9000',
+            'access_key_id': '${MINIO_ACCESS_KEY}',
+            'secret_access_key': '${MINIO_SECRET_KEY}'
+        }
+    }
+}
+```
+
+3.2 Gestion des Données avec les Générateurs
+
+Implementation d'un générateur pour le chargement efficace des données :
+
+```python
+def data_generator(file_paths, batch_size=32):
+    while True:
+        for path in file_paths:
+            with open(path, 'r') as f:
+                data = []
+                for line in f:
+                    data.append(json.loads(line))
+                    if len(data) == batch_size:
+                        yield process_batch(data)
+                        data = []
+```
+
+3.3 Tracking des Versions
+
+Mise en place d'un système de tracking automatique des versions :
+
+```python
+@dataclass
+class DataVersion:
+    version: str
+    timestamp: datetime
+    features: List[str]
+    statistics: Dict[str, float]
+    
+class DataVersioning:
+    def __init__(self):
+        self.dvc = DVCClient()
+        self.mlflow = MLflowClient()
+    
+    def create_version(self, data_path: str) -> DataVersion:
+        stats = self.calculate_statistics(data_path)
+        version = self.dvc.commit(data_path)
+        return DataVersion(
+            version=version,
+            timestamp=datetime.now(),
+            features=self.extract_features(data_path),
+            statistics=stats
+        )
+```
+
+4. Développement du Modèle de Classification
+------------------------------------------
+4.1 Architecture du Modèle
+
+Implémentation d'une architecture modulaire utilisant le pattern Factory :
+
+```python
+class ModelFactory:
+    @staticmethod
+    def create_model(model_type: str, config: Dict) -> BaseModel:
+        if model_type == "bert":
+            return BERTClassifier(config)
+        elif model_type == "lstm":
+            return LSTMClassifier(config)
+        else:
+            raise ValueError(f"Model type {model_type} not supported")
+
+class BaseModel(ABC):
+    @abstractmethod
+    def forward(self, x):
+        pass
+    
+    @abstractmethod
+    def predict(self, x):
+        pass
+
+class BERTClassifier(BaseModel):
+    def __init__(self, config):
+        self.model = AutoModelForSequenceClassification.from_pretrained(
+            config['model_name'],
+            num_labels=config['num_labels']
+        )
+```
+
+4.2 Optimisation des Performances
+
+Implémentation de techniques d'optimisation avancées :
+
+```python
+class ModelOptimizer:
+    def __init__(self, model: BaseModel):
+        self.model = model
+    
+    def quantize(self):
+        """Quantization du modèle pour optimiser la taille et la vitesse"""
+        return torch.quantization.quantize_dynamic(
+            self.model, 
+            {torch.nn.Linear}, 
+            dtype=torch.qint8
+        )
+    
+    def prune(self, amount=0.3):
+        """Élagage du modèle pour réduire la complexité"""
+        parameters_to_prune = (
+            (self.model.fc1, 'weight'),
+            (self.model.fc2, 'weight'),
+        )
+        torch.nn.utils.prune.global_unstructured(
+            parameters_to_prune,
+            pruning_method=torch.nn.utils.prune.L1Unstructured,
+            amount=amount,
+        )
+```
+
+5. Pipeline d'Entraînement
+-------------------------
+5.1 Configuration du Pipeline
+
+Mise en place d'un pipeline d'entraînement modulaire :
+
+```python
+class TrainingPipeline:
+    def __init__(self, config: Dict):
+        self.config = config
+        self.model = ModelFactory.create_model(
+            config['model_type'],
+            config['model_config']
+        )
+        self.optimizer = torch.optim.AdamW(
+            self.model.parameters(),
+            lr=config['learning_rate']
+        )
+        self.scheduler = get_linear_schedule_with_warmup(
+            self.optimizer,
+            num_warmup_steps=config['warmup_steps']
+        )
+        
+    @mlflow_tracking
+    def train(self, train_data, val_data):
+        for epoch in range(self.config['epochs']):
+            train_loss = self._train_epoch(train_data)
+            val_loss, metrics = self._validate(val_data)
+            
+            mlflow.log_metrics({
+                'train_loss': train_loss,
+                'val_loss': val_loss,
+                **metrics
+            })
+```
+
+5.2 Décorateurs pour le Monitoring
+
+Implémentation de décorateurs pour le suivi des performances :
+
+```python
+def mlflow_tracking(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        with mlflow.start_run():
+            mlflow.log_params(kwargs.get('params', {}))
+            result = func(*args, **kwargs)
+            mlflow.log_metrics(result.metrics)
+        return result
+    return wrapper
+
+def performance_monitoring(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        memory_before = psutil.Process().memory_info().rss
+        
+        result = func(*args, **kwargs)
+        
+        execution_time = time.time() - start_time
+        memory_used = psutil.Process().memory_info().rss - memory_before
+        
+        metrics = {
+            'execution_time': execution_time,
+            'memory_used': memory_used
+        }
+        prometheus_client.push_to_gateway(metrics)
+        
+        return result
+    return wrapper
+```
+
+6. Déploiement et Infrastructure
+------------------------------
+6.1 Configuration Docker
+
+Création d'un Dockerfile optimisé :
+
+```dockerfile
+FROM python:3.9-slim as builder
+
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --user -r requirements.txt
+
+FROM python:3.9-slim
+WORKDIR /app
+
+COPY --from=builder /root/.local /root/.local
+COPY . .
+
+ENV PATH=/root/.local/bin:$PATH
+ENV MODEL_PATH=/app/models
+ENV CONFIG_PATH=/app/config
+
+EXPOSE 8000
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+6.2 Configuration Kubernetes
+
+Déploiement sur Kubernetes avec haute disponibilité :
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: text-classifier
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: text-classifier
+  template:
+    metadata:
+      labels:
+        app: text-classifier
+    spec:
+      containers:
+      - name: classifier
+        image: text-classifier:latest
+        resources:
+          limits:
+            memory: "2Gi"
+            cpu: "1"
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+        ports:
+        - containerPort: 8000
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8000
+```
+
+7. Sécurité et Conformité
+------------------------
+7.1 Authentification et Autorisation
+
+Implémentation de la sécurité avec OAuth2 et JWT :
+
+```python
+class SecurityConfig:
+    SECRET_KEY = os.getenv("SECRET_KEY")
+    ALGORITHM = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+class Auth:
+    def __init__(self):
+        self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+        self.oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+    
+    def verify_password(self, plain_password, hashed_password):
+        return self.pwd_context.verify(plain_password, hashed_password)
+    
+    def get_password_hash(self, password):
+        return self.pwd_context.hash(password)
+    
+    def create_access_token(self, data: dict):
+        to_encode = data.copy()
+        expire = datetime.utcnow() + timedelta(
+            minutes=SecurityConfig.ACCESS_TOKEN_EXPIRE_MINUTES
+        )
+        to_encode.update({"exp": expire})
+        return jwt.encode(
+            to_encode, 
+            SecurityConfig.SECRET_KEY, 
+            algorithm=SecurityConfig.ALGORITHM
+        )
+```
+
+7.2 Chiffrement des Données
+
+Mise en place du chiffrement des données sensibles :
+
+```python
+class DataEncryption:
+    def __init__(self, key: bytes):
+        self.fernet = Fernet(key)
+    
+    def encrypt_data(self, data: bytes) -> bytes:
+        return self.fernet.encrypt(data)
+    
+    def decrypt_data(self, encrypted_data: bytes) -> bytes:
+        return self.fernet.decrypt(encrypted_data)
+    
+    @contextmanager
+    def encrypted_file(self, path: str, mode='rb'):
+        with open(path, mode) as f:
+            if 'r' in mode:
+                yield self.decrypt_data(f.read())
+            else:
+                f.write(self.encrypt_data(yield))
+```
+
+8. Monitoring et Maintenance
+--------------------------
+8.1 Configuration Prometheus
+
+Mise en place des métriques Prometheus :
+
+```python
+class MetricsCollector:
+    def __init__(self):
+        self.prediction_latency = Summary(
+            'prediction_latency_seconds',
+            'Time spent processing prediction'
+        )
+        self.prediction_counter = Counter(
+            'predictions_total',
+            'Total number of predictions',
+            ['model_version', 'result']
+        )
+        self.model_accuracy = Gauge(
+            'model_accuracy',
+            'Current model accuracy'
+        )
+
+    @contextmanager
+    def track_prediction_time(self):
+        start_time = time.time()
+        yield
+        self.prediction_latency.observe(time.time() - start_time)
+```
+
+8.2 Détection de Drift
+
+Implémentation de la détection de drift :
+
+```python
+class DriftDetector:
+    def __init__(self, reference_data: pd.DataFrame):
+        self.reference_data = reference_data
+        self.drift_threshold = 0.05
+        
+    def calculate_drift(self, current_data: pd.DataFrame) -> float:
+        drift_score = wasserstein_distance(
+            self.reference_data.values.flatten(),
+            current_data.values.flatten()
+        )
+        return drift_score
+    
+    def check_drift(self, current_data: pd.DataFrame) -> bool:
+        drift_score = self.calculate_drift(current_data)
+        return drift_score > self.drift_threshold
+```
+
+8.3 Système d'Alerting
+
+Configuration des alertes :
+
+```python
+class AlertingSystem:
+    def __init__(self):
+        self.slack_webhook = os.getenv('SLACK_WEBHOOK')
+        self.email_config = {
+            'smtp_server': os.getenv('SMTP_SERVER'),
+            'smtp_port': os.getenv('SMTP_PORT'),
+            'sender_email': os.getenv('SENDER_EMAIL'),
+            'sender_password': os.getenv('SENDER_PASSWORD')
+        }
+    
+    def send_alert(self, alert_type: str, message: str):
+        if alert_type == 'drift_detected':
+            self._send_drift_alert(message)
+        elif alert_type == 'performance_degradation':
+            self._send_performance_alert(message)
+        elif alert_type == 'security_breach':
+            self._send_security_alert(message)
+```
+
+9. Conclusion
+------------
+Ce rapport détaille l'implémentation complète d'un pipeline MLOps pour la classification de texte. L'architecture proposée répond aux exigences modernes en termes de scalabilité, maintenabilité et sécurité. Les points clés de cette implémentation sont :
+
+- Une architecture modulaire et extensible
+- Une gestion efficace des données avec DVC
+- Un pipeline d'entraînement robuste
+- Un déploiement automatisé avec Kubernetes
+- Une sécurité renforcée
+- Un monitoring complet
+
+Les prochaines étapes pourraient inclure :
+- L'amélioration continue des modèles
+- L'optimisation des performances
+- L'ajout de nouvelles fonctionnalités
+- L'extension des capacités de monitoring
+
+Cette implémentation fournit une base solide pour le développement futur du système et peut être adaptée à d'autres cas d'usage similaires.
