@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block title %}Teacher Dashboard - Faculty Schedule Management{% endblock %}
+
+{% block content %}
+<div class="py-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h1 class="text-3xl font-bold text-gray-900">Welcome, {{ current_user.full_name }}</h1>
+        
+        <!-- Statistics Cards -->
+        <div class="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <!-- Weekly Hours -->
+            <div class="bg-white overflow-hidden shadow rounded-lg">
+                <div class="p-5">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-clock text-2xl text-indigo-600"></i>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="text-sm font-medium text-gray-500 truncate">
+                                    Weekly Teaching Hours
+                                </dt>
+                                <dd class="flex items-baseline">
+                                    <div class="text-2xl font-semibold text-gray-900">
+                                        {{ weekly_hours }}
+                                    </div>
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Courses Count -->
+            <div class="bg-white overflow-hidden shadow rounded-lg">
+                <div class="p-5">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-book text-2xl text-indigo-600"></i>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="text-sm font-medium text-gray-500 truncate">
+                                    Active Courses
+                                </dt>
+                                <dd class="flex items-baseline">
+                                    <div class="text-2xl font-semibold text-gray-900">
+                                        {{ courses|length }}
+                                    </div>
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Next Class -->
+            <div class="bg-white overflow-hidden shadow rounded-lg">
+                <div class="p-5">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-calendar-alt text-2xl text-indigo-600"></i>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="text-sm font-medium text-gray-500 truncate">
+                                    Next Class
+                                </dt>
+                                <dd id="nextClass" class="mt-1 text-sm text-gray-900">
+                                    Loading...
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Today's Schedule -->
+        <div class="mt-8">
+            <h2 class="text-lg font-medium text-gray-900">Today's Schedule</h2>
+            <div class="mt-4 bg-white shadow overflow-hidden sm:rounded-md">
+                <ul role="list" class="divide-y divide-gray-200">
+                    {% for schedule in today_schedule %}
+                    <li>
+                        <div class="px-4 py-4 sm:px-6">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0">
+                                        {% if schedule.course.course_type == 'LECTURE' %}
+                                        <i class="fas fa-chalkboard-teacher text-indigo-600"></i>
+                                        {% elif schedule.course.course_type == 'TD' %}
+                                        <i class="fas fa-users text-green-600"></i>
+                                        {% else %}
+                                        <i class="fas fa-laptop-code text-blue-600"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div class="ml-4">
+                                        <p class="text-sm font-medium text-indigo-600">
+                                            {{ schedule.course.name }}
+                                        </p>
+                                        <p class="text-sm text-gray-500">
+                                            {{ schedule.time_slot.start_time.strftime('%H:%M') }} - {{ schedule.time_slot.end_time.strftime('%H:%M') }}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center">
+                                    <div class="text-sm text-gray-500">
+                                        <i class="fas fa-door-open mr-1"></i>
+                                        {{ schedule.room.name }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                    {% else %}
+                    <li>
+                        <div class="px-4 py-4 sm:px-6 text-center text-gray-500">
+                            No classes scheduled for today
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <!-- Course Overview -->
+        <div class="mt-8">
+            <h2 class="text-lg font-medium text-gray-900">Your Courses</h2>
+            <div class="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {% for course in courses %}
+                <div class="bg-white overflow-hidden shadow rounded-lg">
+                    <div class="p-5">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                {% if course.course_type == 'LECTURE' %}
+                                <i class="fas fa-chalkboard-teacher text-2xl text-indigo-600"></i>
+                                {% elif course.course_type == 'TD' %}
+                                <i class="fas fa-users text-2xl text-green-600"></i>
+                                {% else %}
+                                <i class="fas fa-laptop-code text-2xl text-blue-600"></i>
+                                {% endif %}
+                            </div>
+                            <div class="ml-5 w-0 flex-1">
+                                <h3 class="text-lg font-medium text-gray-900">
+                                    {{ course.name }}
+                                </h3>
+                                <p class="mt-1 text-sm text-gray-500">
+                                    {{ course.program.name }}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <a href="{{ url_for('teacher.course_details', course_id=course.id) }}" 
+                               class="text-sm font-medium text-indigo-600 hover:text-indigo-500">
+                                View Details <i class="fas fa-arrow-right ml-1"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+// Fetch next class information
+async function fetchNextClass() {
+    try {
+        const response = await fetch('{{ url_for("teacher.get_next_schedule") }}');
+        const data = await response.json();
+        
+        const nextClassElement = document.getElementById('nextClass');
+        if (data.message) {
+            nextClassElement.textContent = data.message;
+        } else {
+            nextClassElement.innerHTML = `
+                <strong>${data.course}</strong><br>
+                ${data.room}<br>
+                ${data.date} at ${data.time}
+            `;
+        }
+    } catch (error) {
+        console.error('Error fetching next class:', error);
+    }
+}
+
+// Update next class information periodically
+fetchNextClass();
+setInterval(fetchNextClass, 60000); // Update every minute
+</script>
+{% endblock %}
+{% endblock %}
