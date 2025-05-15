@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block title %}Create Room - Faculty Schedule Management{% endblock %}
+
+{% block content %}
+<div class="py-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="md:flex md:items-center md:justify-between">
+            <div class="flex-1 min-w-0">
+                <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
+                    Create New Room
+                </h2>
+            </div>
+            <div class="mt-4 flex md:mt-0 md:ml-4">
+                <a href="{{ url_for('admin.rooms') }}" 
+                   class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    <i class="fas fa-arrow-left -ml-1 mr-2"></i>
+                    Back to Rooms
+                </a>
+            </div>
+        </div>
+
+        <div class="mt-8">
+            <div class="md:grid md:grid-cols-3 md:gap-6">
+                <div class="md:col-span-1">
+                    <div class="px-4 sm:px-0">
+                        <h3 class="text-lg font-medium leading-6 text-gray-900">Room Information</h3>
+                        <p class="mt-1 text-sm text-gray-600">
+                            Enter the details for the new room. Make sure to specify the room type and capacity correctly.
+                        </p>
+                    </div>
+                </div>
+                <div class="mt-5 md:mt-0 md:col-span-2">
+                    <form action="{{ url_for('admin.create_room') }}" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="shadow sm:rounded-md sm:overflow-hidden">
+                            <div class="px-4 py-5 bg-white space-y-6 sm:p-6">
+                                <!-- Basic Information -->
+                                <div class="grid grid-cols-6 gap-6">
+                                    <!-- Room Name -->
+                                    <div class="col-span-6 sm:col-span-3">
+                                        <label for="name" class="block text-sm font-medium text-gray-700">Room Name</label>
+                                        <input type="text" name="name" id="name" required
+                                               class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                                               placeholder="e.g., A101">
+                                    </div>
+
+                                    <!-- Room Type -->
+                                    <div class="col-span-6 sm:col-span-3">
+                                        <label for="room_type" class="block text-sm font-medium text-gray-700">Room Type</label>
+                                        <select id="room_type" name="room_type" required
+                                                class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                                            <option value="AMPHITHEATER">Amphitheater</option>
+                                            <option value="TD_ROOM">TD Room</option>
+                                            <option value="TP_ROOM">TP Room</option>
+                                        </select>
+                                    </div>
+
+                                    <!-- Capacity -->
+                                    <div class="col-span-6 sm:col-span-3">
+                                        <label for="capacity" class="block text-sm font-medium text-gray-700">Capacity</label>
+                                        <input type="number" name="capacity" id="capacity" required min="1"
+                                               class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                                               placeholder="Number of seats">
+                                    </div>
+
+                                    <!-- Floor -->
+                                    <div class="col-span-6 sm:col-span-3">
+                                        <label for="floor" class="block text-sm font-medium text-gray-700">Floor</label>
+                                        <input type="number" name="floor" id="floor" required
+                                               class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                                               placeholder="Floor number">
+                                    </div>
+
+                                    <!-- Building -->
+                                    <div class="col-span-6">
+                                        <label for="building" class="block text-sm font-medium text-gray-700">Building</label>
+                                        <input type="text" name="building" id="building" required
+                                               class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                                               placeholder="Building name or number">
+                                    </div>
+                                </div>
+
+                                <!-- Equipment -->
+                                <div class="mt-6">
+                                    <h4 class="text-sm font-medium text-gray-900">Equipment</h4>
+                                    <div class="mt-4 space-y-4">
+                                        <div class="flex items-start">
+                                            <div class="flex items-center h-5">
+                                                <input id="has_projector" name="has_projector" type="checkbox"
+                                                       class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded">
+                                            </div>
+                                            <div class="ml-3 text-sm">
+                                                <label for="has_projector" class="font-medium text-gray-700">Projector</label>
+                                                <p class="text-gray-500">Room is equipped with a projector</p>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="flex items-start">
+                                            <div class="flex items-center h-5">
+                                                <input id="has_computers" name="has_computers" type="checkbox"
+                                                       class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded">
+                                            </div>
+                                            <div class="ml-3 text-sm">
+                                                <label for="has_computers" class="font-medium text-gray-700">Computers</label>
+                                                <p class="text-gray-500">Room is equipped with computers</p>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="flex items-start">
+                                            <div class="flex items-center h-5">
+                                                <input id="has_whiteboard" name="has_whiteboard" type="checkbox"
+                                                       class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded"
+                                                       checked>
+                                            </div>
+                                            <div class="ml-3 text-sm">
+                                                <label for="has_whiteboard" class="font-medium text-gray-700">Whiteboard</label>
+                                                <p class="text-gray-500">Room has a whiteboard</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="px-4 py-3 bg-gray-50 text-right sm:px-6">
+                                <button type="submit"
+                                        class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                    <i class="fas fa-save mr-2"></i>
+                                    Create Room
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+// Client-side validation
+document.querySelector('form').addEventListener('submit', function(e) {
+    const name = document.getElementById('name').value.trim();
+    const capacity = parseInt(document.getElementById('capacity').value);
+    const floor = parseInt(document.getElementById('floor').value);
+    const building = document.getElementById('building').value.trim();
+    
+    if (name.length < 2) {
+        e.preventDefault();
+        alert('Room name must be at least 2 characters long');
+        return;
+    }
+    
+    if (capacity < 1) {
+        e.preventDefault();
+        alert('Capacity must be at least 1');
+        return;
+    }
+    
+    if (building.length < 1) {
+        e.preventDefault();
+        alert('Building name is required');
+        return;
+    }
+});
+
+// Auto-update equipment based on room type
+document.getElementById('room_type').addEventListener('change', function(e) {
+    const type = e.target.value;
+    const hasComputers = document.getElementById('has_computers');
+    const hasProjector = document.getElementById('has_projector');
+    
+    if (type === 'TP_ROOM') {
+        hasComputers.checked = true;
+        hasProjector.checked = true;
+    } else if (type === 'AMPHITHEATER') {
+        hasComputers.checked = false;
+        hasProjector.checked = true;
+    }
+});
+</script>
+{% endblock %}
+{% endblock %}
