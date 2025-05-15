@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Faculty Schedule Management{% endblock %}</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Custom Styles -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-indigo-600 text-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <a href="{{ url_for('main.index') }}" class="flex items-center">
+                        <i class="fas fa-calendar-alt text-2xl mr-2"></i>
+                        <span class="font-semibold text-xl">Faculty Schedule</span>
+                    </a>
+                </div>
+                
+                {% if current_user.is_authenticated %}
+                <div class="flex items-center">
+                    <!-- Navigation based on user role -->
+                    {% if current_user.type == 'admin' %}
+                    <a href="{{ url_for('admin.dashboard') }}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-500">Dashboard</a>
+                    <a href="{{ url_for('admin.departments') }}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-500">Departments</a>
+                    <a href="{{ url_for('admin.programs') }}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-500">Programs</a>
+                    <a href="{{ url_for('admin.rooms') }}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-500">Rooms</a>
+                    <a href="{{ url_for('admin.schedules') }}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-500">Schedules</a>
+                    {% elif current_user.type == 'teacher' %}
+                    <a href="{{ url_for('teacher.dashboard') }}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-500">Dashboard</a>
+                    <a href="{{ url_for('teacher.schedule') }}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-500">Schedule</a>
+                    <a href="{{ url_for('teacher.courses') }}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-500">Courses</a>
+                    <a href="{{ url_for('teacher.statistics') }}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-500">Statistics</a>
+                    {% else %}
+                    <a href="{{ url_for('student.dashboard') }}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-500">Dashboard</a>
+                    <a href="{{ url_for('student.schedule') }}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-500">Schedule</a>
+                    <a href="{{ url_for('student.courses') }}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-500">Courses</a>
+                    <a href="{{ url_for('student.program') }}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-500">Program</a>
+                    {% endif %}
+                    
+                    <!-- User Menu -->
+                    <div class="ml-4 relative">
+                        <button class="flex items-center text-sm focus:outline-none">
+                            <i class="fas fa-user-circle text-2xl"></i>
+                            <span class="ml-2">{{ current_user.username }}</span>
+                        </button>
+                        <a href="{{ url_for('auth.logout') }}" class="ml-4 text-sm hover:text-gray-200">Logout</a>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+                    <div class="rounded-md p-4 {% if category == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}">
+                        <p class="text-sm">{{ message }}</p>
+                    </div>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white mt-8">
+        <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+            <p class="text-center text-sm">&copy; {{ now.year }} Faculty Schedule Management System. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
