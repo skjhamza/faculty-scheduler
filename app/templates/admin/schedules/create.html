@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+
+{% block title %}Create Schedule - Faculty Schedule Management{% endblock %}
+
+{% block content %}
+<div class="py-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="md:flex md:items-center md:justify-between">
+            <div class="flex-1 min-w-0">
+                <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
+                    Create New Schedule
+                </h2>
+            </div>
+            <div class="mt-4 flex md:mt-0 md:ml-4">
+                <a href="{{ url_for('admin.schedules') }}" 
+                   class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    <i class="fas fa-arrow-left -ml-1 mr-2"></i>
+                    Back to Schedules
+                </a>
+            </div>
+        </div>
+
+        <div class="mt-8">
+            <div class="md:grid md:grid-cols-3 md:gap-6">
+                <div class="md:col-span-1">
+                    <div class="px-4 sm:px-0">
+                        <h3 class="text-lg font-medium leading-6 text-gray-900">Schedule Information</h3>
+                        <p class="mt-1 text-sm text-gray-600">
+                            Create a new schedule by selecting the course, room, and time slot. The system will automatically check for conflicts.
+                        </p>
+                    </div>
+                </div>
+                <div class="mt-5 md:mt-0 md:col-span-2">
+                    <form action="{{ url_for('admin.create_schedule') }}" method="POST" id="scheduleForm">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="shadow sm:rounded-md sm:overflow-hidden">
+                            <div class="px-4 py-5 bg-white space-y-6 sm:p-6">
+                                <!-- Course Selection -->
+                                <div>
+                                    <label for="course_id" class="block text-sm font-medium text-gray-700">Course</label>
+                                    <select id="course_id" name="course_id" required
+                                            class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                                        <option value="">Select a course</option>
+                                        {% for course in courses %}
+                                        <option value="{{ course.id }}" data-type="{{ course.course_type }}">
+                                            {{ course.code }} - {{ course.name }} ({{ course.program.name }})
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <!-- Room Selection -->
+                                <div>
+                                    <label for="room_id" class="block text-sm font-medium text-gray-700">Room</label>
+                                    <select id="room_id" name="room_id" required
+                                            class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                                        <option value="">Select a room</option>
+                                        {% for room in rooms %}
+                                        <option value="{{ room.id }}" data-type="{{ room.room_type }}" data-capacity="{{ room.capacity }}">
+                                            {{ room.name }} ({{ room.room_type.replace('_', ' ').title() }}, Capacity: {{ room.capacity }})
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <!-- Time Slot -->
+                                <div class="grid grid-cols-2 gap-6">
+                                    <!-- Day of Week -->
+                                    <div>
+                                        <label for="day_of_week" class="block text-sm font-medium text-gray-700">Day</label>
+                                        <select id="day_of_week" name="day_of_week" required
+                                                class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                                            <option value="0">Monday</option>
+                                            <option value="1">Tuesday</option>
+                                            <option value="2">Wednesday</option>
+                                            <option value="3">Thursday</option>
+                                            <option value="4">Friday</option>
+                                            <option value="5">Saturday</option>
+                                        </select>
+                                    </div>
+
+                                    <!-- Time Slot -->
+                                    <div>
+                                        <label for="time_slot_id" class="block text-sm font-medium text-gray-700">Time Slot</label>
+                                        <select id="time_slot_id" name="time_slot_id" required
+                                                class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                                            {% for slot in time_slots %}
+                                            <option value="{{ slot.id }}">
+                                                {{ slot.start_time.strftime('%H:%M') }} - {{ slot.end_time.strftime('%H:%M') }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Conflict Warning -->
+                                <div id="conflictWarning" class="hidden rounded-md bg-red-50 p-4">
+                                    <div class="flex">
+                                        <div class="flex-shrink-0">
+                                            <i class="fas fa-exclamation-triangle text-red-400"></i>
+                                        </div>
+                                        <div class="ml-3">
+                                            <h3 class="text-sm font-medium text-red-800">
+                                                Schedule Conflict Detected
+                                            </h3>
+                                            <div class="mt-2 text-sm text-red-700">
+                                                <p id="conflictMessage"></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="px-4 py-3 bg-gray-50 text-right sm:px-6">
+                                <button type="submit"
+                                        class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                    <i class="fas fa-save mr-2"></i>
+                                    Create Schedule
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.getElementById('scheduleForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = {
+        course_id: document.getElementById('course_id').value,
+        room_id: document.getElementById('room_id').value,
+        time_slot_id: document.getElementById('time_slot_id').value
+    };
+    
+    try {
+        const response = await fetch('/api/check-schedule-conflicts', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrf_token]').value
+            },
+            body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        
+        if (data.conflicts) {
+            document.getElementById('conflictMessage').textContent = data.message;
+            document.getElementById('conflictWarning').classList.remove('hidden');
+        } else {
+            this.submit();
+        }
+    } catch (error) {
+        console.error('Error checking conflicts:', error);
+    }
+});
+
+// Filter rooms based on course type
+document.getElementById('course_id').addEventListener('change', function() {
+    const courseType = this.options[this.selectedIndex].dataset.type;
+    const roomSelect = document.getElementById('room_id');
+    const rooms = Array.from(roomSelect.options);
+    
+    rooms.forEach(option => {
+        if (option.value === '') return; // Skip placeholder option
+        
+        const roomType = option.dataset.type;
+        const isCompatible = (
+            (courseType === 'LECTURE' && roomType === 'AMPHITHEATER') ||
+            (courseType === 'TD' && roomType === 'TD_ROOM') ||
+            (courseType === 'TP' && roomType === 'TP_ROOM')
+        );
+        
+        option.hidden = !isCompatible;
+    });
+    
+    // Reset room selection if current selection is incompatible
+    if (roomSelect.selectedOptions[0].hidden) {
+        roomSelect.value = '';
+    }
+});
+</script>
+{% endblock %}
+{% endblock %}
